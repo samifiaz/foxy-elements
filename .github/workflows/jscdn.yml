@@ -1,0 +1,101 @@
+name: Foxy UNPKG Clone
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  Upload-Foxy-Elements-Dist-To-S3:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Checkout Foxy/foxy-elements
+        uses: actions/checkout@v2
+        with:
+          repository: Foxy/foxy-elements
+          path: foxy-elements
+
+      - name: Run NPM install & Prepack
+        run: |
+          cd foxy-elements
+          npm install
+          npm run prepack
+
+      - name: Get latest tag
+        run: echo "RELEASE_TAG=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+
+      - name: Get previous tag hash
+        run: |
+          cd foxy-elements
+          git fetch --all --tags
+          echo "PREV_TAG_HASH=$(git rev-list --tags --max-count=1)" >> $GITHUB_ENV
+
+      - name: Get previous tag 
+        run: |
+          cd foxy-elements
+          echo "PREV_TAG=$(git describe --abbrev=0 --tags ${{ env.PREV_TAG_HASH }} )" >> $GITHUB_ENV
+
+      - name: Get release dir names
+        uses: rishabhgupta/split-by@v1
+        id: release_dir
+        with:
+          string: ${{ env.RELEASE_TAG }}
+          split-by: '.'
+      - run: | 
+          echo "release major ${{ steps.release_dir.outputs._0 }}"
+          echo "release minor ${{ steps.release_dir.outputs._1 }}"
+          echo "release patch ${{ steps.release_dir.outputs._2 }}"
+
+      - name: Get release dir major name
+        uses: rishabhgupta/split-by@v1
+        id: release_dir_major
+        with:
+          string: ${{ steps.release_dir_major.outputs._0 }}
+          split-by: 'v'
+      - run: | 
+          echo "release minor ${{ steps.release_dir.outputs._1}}"
+
+      - name: Get previous dir names
+        uses: rishabhgupta/split-by@v1
+        id: previous_dir
+        with:
+          string: ${{ env.PREV_TAG }}
+          split-by: '.'
+      - run: | 
+          echo "previous major ${{ steps.previous_dir.outputs._0}}"
+          echo "previous minor ${{ steps.previous_dir.outputs._1}}"
+          echo "previous patch ${{ steps.previous_dir.outputs._2}}"
+
+      - name: Upload patch version
+        # run: echo "patch  ${{ steps.previous_dir.outputs._2}} "aa
+        uses: shallwefootball/s3-upload-action@master
+        id: upload-patch
+        with:
+          aws_key_id: ${{ secrets.AWS_S3_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_S3_ACCESS_KEY}}
+          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          source_dir: "foxy-elements/dist"
+          destination_dir: '${{ steps.release_dir.outputs._0 }}.${{ steps.release_dir.outputs._1 }}.${{ steps.release_dir.outputs._2 }}'
+
+      - name: Upload minor version
+        # run: echo "minor ${{ steps.previous_dir.outputs._1}}"
+        uses: shallwefootball/s3-upload-action@master
+        id: upload-minor
+        with:
+          aws_key_id: ${{ secrets.AWS_S3_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_S3_ACCESS_KEY}}
+          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          source_dir: "foxy-elements/dist"
+          destination_dir: '${{ steps.release_dir.outputs._0 }}.${{ steps.release_dir.outputs._1 }}'
+
+      - name: Upload major version
+        # run: echo "major ${{ steps.previous_dir.outputs._0}}
+        uses: shallwefootball/s3-upload-action@master
+        id: upload-major
+        with:
+          aws_key_id: ${{ secrets.AWS_S3_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_S3_ACCESS_KEY}}
+          aws_bucket: ${{ secrets.AWS_BUCKET }}
+          source_dir: "foxy-elements/dist"
+          destination_dir: ${{ steps.release_dir.outputs._0 }}
