@@ -1,4 +1,4 @@
-name: S3CDN upload
+name: S3 CDN upload
 
 on:
   push:
@@ -21,5 +21,4 @@ jobs:
           AWS_S3_CDN_BUCKET_NAME: ${{ secrets.AWS_S3_CDN_BUCKET_NAME }}
           AWS_S3_CDN_KEY_ID: ${{ secrets.AWS_S3_CDN_KEY_ID }}
           AWS_S3_CDN_KEY_SECRET: ${{ secrets.AWS_S3_CDN_KEY_SECRET }}
-          # AWS_REGION: "us-west-1" # optional: defaults to us-east-1
-          # SOURCE_DIR: "public" # optional: defaults to `dist` directory
+          SOURCE_DIR: "dist/cdn" # optional: defaults to `dist` directory
